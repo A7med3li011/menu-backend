@@ -15,7 +15,7 @@ export const createSubCategory = handlerAsync(async (req, res, next) => {
     return next(new AppError("subCategory is already exist", 409));
   const CategoryExist = await categoryModel.findById(category);
 
-  if (!CategoryExist) return next(new AppError("category is not  exist", 409));
+  if (!CategoryExist) return next(new AppError("category not  exist", 409));
 
   const newSubCategory = await subCategoryModel.create({
     title,
