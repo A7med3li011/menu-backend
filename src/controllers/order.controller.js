@@ -8,6 +8,17 @@ import userModel from "../../DataBase/models/user.model.js";
 
 export const createOrder = handlerAsync(async (req, res, next) => {
   const { items, orderType, location, locationMap, table } = req.body;
+
+  if (orderType === "delivery") {
+    if (!location || !locationMap) {
+      return next(
+        new AppError(
+          "Location and locationMap are required for delivery orders",
+          400
+        )
+      );
+    }
+  }
   const location1 =
     typeof location === "string" ? JSON.parse(location) : location;
   let totalPrice = 0;
@@ -40,8 +51,8 @@ export const createOrder = handlerAsync(async (req, res, next) => {
     orderType,
     OrderNumber: randomNumber,
     table: table || null,
-    location: location1 ?? "",
-    locationMap,
+    location: orderType == "delivery" ? location1 : undefined,
+    locationMap: orderType == "delivery" ? locationMap : undefined,
     totalPrice,
     customer: req.user._id,
   });
@@ -52,11 +63,7 @@ export const updateOrder = handlerAsync(async (req, res, next) => {
   const { id } = req.params;
   const orderExist = await orderMdoel.findById({ _id: id });
   if (!orderExist) next(new AppError("order not found", 404));
-  const parseLocation = JSON.parse(req.body.location);
-  await orderMdoel.findByIdAndUpdate(
-    { _id: id },
-    { ...req.body, parseLocation }
-  );
+  await orderMdoel.findByIdAndUpdate({ _id: id }, { ...req.body });
   res.status(200).json({ message: "order updated successfully" });
 });
 export const updateOrderItems = handlerAsync(async (req, res, next) => {

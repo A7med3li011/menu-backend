@@ -196,8 +196,8 @@ export const updateSubCategorySchema = Joi.object({
 export const createOrderSchema = Joi.object({
   orderType: Joi.string().required().valid("dine-in", "takeaway", "delivery"),
   fromApp: Joi.boolean().optional(),
-  location: Joi.object().required(),
-  locationMap: Joi.string().required(),
+  location: Joi.object().optional(),
+  locationMap: Joi.string().optional(),
   tableNumber: Joi.string().optional().allow(""),
   table: Joi.string().optional(),
   specialInstructions: Joi.string(),
