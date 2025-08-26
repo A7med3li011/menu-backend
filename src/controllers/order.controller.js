@@ -59,6 +59,53 @@ export const updateOrder = handlerAsync(async (req, res, next) => {
   );
   res.status(200).json({ message: "order updated successfully" });
 });
+export const updateOrderItems = handlerAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { items } = req.body;
+  const orderExist = await orderMdoel.findById({ _id: id });
+  if (!orderExist) next(new AppError("order not found", 404));
+
+  if (!items.length) {
+    await orderMdoel.findByIdAndDelete(id);
+    res.status(200).json({ message: "order deleted successfully" });
+  }
+  let totalPrice = 0;
+
+  for (const item of items) {
+    const product = await productModel.findById({ _id: item.product._id });
+    if (!product) return next(new AppError("product not found", 404));
+    let addtionalPrice = 0;
+    if (
+      item?.customizations &&
+      item?.customizations?.extrasWithPrices &&
+      item?.customizations?.extrasWithPrices.length
+    ) {
+      addtionalPrice = item?.customizations?.extrasWithPrices.reduce(
+        (acc, curr) => acc + Number(curr.price),
+        0
+      );
+    }
+    totalPrice += product.price * item.quantity + addtionalPrice;
+  }
+
+  let arr;
+
+  arr = items.map((ele) => ({
+    product: ele.product._id,
+    quantity: ele.quantity,
+    notes: ele.notes,
+    customizations: ele.customizations,
+    innerStatus: ele.innerStatus,
+    innerStatus: ele.innerStatus,
+    _id: ele._id,
+  }));
+
+  orderExist.items = arr;
+  orderExist.totalPrice = totalPrice;
+  await orderExist.save();
+
+  res.status(200).json({ message: "order updated successfully" });
+});
 export const updateOrderStatus = handlerAsync(async (req, res, next) => {
   const { orderId, itemId, status } = req.body;
   const orderExist = await orderMdoel.findById({ _id: orderId });
@@ -92,106 +139,249 @@ export const updateOrderStatus = handlerAsync(async (req, res, next) => {
   res.status(200).json({ message: "order updated successfully" });
 });
 
+// export const getAllOrders = handlerAsync(async (req, res, next) => {
+//   const page = parseInt(req.query.page) || 1;
+//   const limit = parseInt(req.query.limit) || 10;
+//   const skip = (page - 1) * limit;
+//   const from = req.query.from;
+//   const search = req.query.search;
+
+//   // Build base query for fromApp and orderType filter
+//   let query = {};
+
+//   if (from === "true" || from === true) {
+//     // Get only orders from app with delivery type
+//     query = {
+//       fromApp: false,
+//       orderType: "delivery",
+//     };
+//   } else if (from === "false" || from === false) {
+//     // Get only orders from website with dine-in type (note: dine-in with hyphen)
+//     query = {
+//       $or: [{ fromApp: false }, { fromApp: { $exists: false } }],
+//       orderType: "dine-in",
+//     };
+//   }
+//   // If from is not provided, get all orders (no filter applied)
+
+//   // If search is provided, find matching customers and tables first
+//   if (search && search.trim()) {
+//     const searchRegex = new RegExp(search.trim(), "i");
+//     // Find matching customers and tables in parallel
+//     const [matchingCustomers, matchingTables] = await Promise.all([
+//       // Replace 'Customer' with your actual customer model
+//       userModel.find({ phone: searchRegex }).select("_id").lean(),
+//       userModel.find({ name: searchRegex }).select("_id").lean(),
+//       // Replace 'Table' with your actual table model
+//       tableModel.find({ title: searchRegex }).select("_id").lean(),
+//     ]);
+//     const customerIds = matchingCustomers.map((c) => c._id);
+//     const tableIds = matchingTables.map((t) => t._id);
+//     // Add search conditions to the main query
+//     const searchConditions = [{ OrderNumber: searchRegex }];
+//     if (customerIds.length > 0) {
+//       searchConditions.push({ customer: { $in: customerIds } });
+//     }
+//     if (tableIds.length > 0) {
+//       searchConditions.push({ table: { $in: tableIds } });
+//     }
+
+//     // Combine with existing query using $and only if there's a filter
+//     if (Object.keys(query).length > 0) {
+//       query = {
+//         $and: [
+//           query, // existing fromApp and orderType filter
+//           { $or: searchConditions },
+//         ],
+//       };
+//     } else {
+//       // If no filter, just use search conditions
+//       query = { $or: searchConditions };
+//     }
+//   }
+
+//   // First, get ALL matching orders without pagination to sort them properly
+//   const [allOrders, totalOrders] = await Promise.all([
+//     orderMdoel
+//       .find(query)
+//       .populate({
+//         path: "customer",
+//         select: `name ${
+//           from === "true" || from === true ? "phone address" : ""
+//         }`,
+//       })
+//       .populate({ path: "items.product", select: "title price" })
+//       .populate("table", "title")
+//       .lean(),
+//     orderMdoel.countDocuments(query),
+//   ]);
+
+//   // Sort ALL orders by status: pending -> preparing -> completed -> ready -> canceled
+//   allOrders.sort((a, b) => {
+//     const statusOrder = [
+//       "pending",
+//       "preparing",
+//       "completed",
+//       "ready",
+//       "canceled",
+//     ];
+//     const aIndex = statusOrder.indexOf(a.status?.toLowerCase());
+//     const bIndex = statusOrder.indexOf(b.status?.toLowerCase());
+//     // If status not found, put at end
+//     const aPos = aIndex === -1 ? 999 : aIndex;
+//     const bPos = bIndex === -1 ? 999 : bIndex;
+//     if (aPos !== bPos) {
+//       return aPos - bPos;
+//     }
+//     // If same status, sort by newest first
+//     return new Date(b.createdAt) - new Date(a.createdAt);
+//   });
+
+//   // THEN apply pagination to the sorted results
+//   const orders = allOrders.slice(skip, skip + limit);
+
+//   res.status(200).json({
+//     message: "Orders found successfully",
+//     data: orders,
+//     pagination: {
+//       total: totalOrders,
+//       page,
+//       limit,
+//       totalPages: Math.ceil(totalOrders / limit),
+//     },
+//   });
+// });
 export const getAllOrders = handlerAsync(async (req, res, next) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
-  const from = req.query.from;
   const search = req.query.search;
+  const from = req.query.from;
+  const query = {};
 
-  // Build base query for fromApp and orderType filter
-  let query = {};
-
-  if (from === "true" || from === true) {
-    // Get only orders from app with delivery type
-    query = {
-      fromApp: false,
-      orderType: "delivery",
-    };
-  } else if (from === "false" || from === false) {
-    // Get only orders from website with dine-in type (note: dine-in with hyphen)
-    query = {
-      $or: [{ fromApp: false }, { fromApp: { $exists: false } }],
-      orderType: "dine-in",
-    };
+  if (from == 1) {
+    query.orderType = "delivery";
   }
-  // If from is not provided, get all orders (no filter applied)
-
-  // If search is provided, find matching customers and tables first
-  if (search && search.trim()) {
-    const searchRegex = new RegExp(search.trim(), "i");
-    // Find matching customers and tables in parallel
-    const [matchingCustomers, matchingTables] = await Promise.all([
-      // Replace 'Customer' with your actual customer model
-      userModel.find({ phone: searchRegex }).select("_id").lean(),
-      userModel.find({ name: searchRegex }).select("_id").lean(),
-      // Replace 'Table' with your actual table model
-      tableModel.find({ title: searchRegex }).select("_id").lean(),
-    ]);
-    const customerIds = matchingCustomers.map((c) => c._id);
-    const tableIds = matchingTables.map((t) => t._id);
-    // Add search conditions to the main query
-    const searchConditions = [{ OrderNumber: searchRegex }];
-    if (customerIds.length > 0) {
-      searchConditions.push({ customer: { $in: customerIds } });
-    }
-    if (tableIds.length > 0) {
-      searchConditions.push({ table: { $in: tableIds } });
-    }
-
-    // Combine with existing query using $and only if there's a filter
-    if (Object.keys(query).length > 0) {
-      query = {
-        $and: [
-          query, // existing fromApp and orderType filter
-          { $or: searchConditions },
-        ],
-      };
-    } else {
-      // If no filter, just use search conditions
-      query = { $or: searchConditions };
-    }
+  if (req.query.filter != "all") {
+    query.status = req.query.filter;
+  } else {
+    delete query.status;
   }
 
-  // First, get ALL matching orders without pagination to sort them properly
-  const [allOrders, totalOrders] = await Promise.all([
-    orderMdoel
-      .find(query)
-      .populate({
-        path: "customer",
-        select: `name ${
-          from === "true" || from === true ? "phone address" : ""
-        }`,
-      })
-      .populate({ path: "items.product", select: "title price" })
-      .populate("table", "title")
-      .lean(),
+  if (search) {
+    const regex = new RegExp(search, "i");
+    query.$or = [
+      { location: regex },
+      { OrderNumber: regex },
+      { status: regex },
+      { orderType: regex },
+    ];
+  }
+
+  const pipeline = [
+    { $match: query },
+    {
+      $addFields: {
+        statusOrder: {
+          $switch: {
+            branches: [
+              { case: { $eq: ["$status", "pending"] }, then: 1 },
+              { case: { $eq: ["$status", "completed"] }, then: 2 },
+              { case: { $eq: ["$status", "ready"] }, then: 3 },
+              { case: { $eq: ["$status", "canceled"] }, then: 4 },
+            ],
+            default: 5, // any other status goes last
+          },
+        },
+      },
+    },
+    { $sort: { statusOrder: 1, createdAt: -1 } },
+    { $skip: skip },
+    { $limit: limit },
+    {
+      $lookup: {
+        from: "users",
+        localField: "customer",
+        foreignField: "_id",
+        as: "customer",
+      },
+    },
+    { $unwind: { path: "$customer", preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        items: {
+          $map: {
+            input: "$items",
+            as: "item",
+            in: {
+              $mergeObjects: [
+                "$$item",
+                {
+                  productId: "$$item.product", // Store original product ID
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: "products",
+        localField: "items.productId",
+        foreignField: "_id",
+        as: "productData",
+      },
+    },
+    {
+      $addFields: {
+        items: {
+          $map: {
+            input: "$items",
+            as: "item",
+            in: {
+              $mergeObjects: [
+                "$$item",
+                {
+                  product: {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: "$productData",
+                          cond: { $eq: ["$$this._id", "$$item.productId"] },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        productData: 0, // Remove the temporary productData array
+        "items.productId": 0, // Remove the temporary productId field
+      },
+    },
+    {
+      $lookup: {
+        from: "tables",
+        localField: "table",
+        foreignField: "_id",
+        as: "table",
+      },
+    },
+    { $unwind: { path: "$table", preserveNullAndEmptyArrays: true } },
+  ];
+
+  const [orders, totalOrders] = await Promise.all([
+    orderMdoel.aggregate(pipeline),
     orderMdoel.countDocuments(query),
   ]);
-
-  // Sort ALL orders by status: pending -> preparing -> completed -> ready -> canceled
-  allOrders.sort((a, b) => {
-    const statusOrder = [
-      "pending",
-      "preparing",
-      "completed",
-      "ready",
-      "canceled",
-    ];
-    const aIndex = statusOrder.indexOf(a.status?.toLowerCase());
-    const bIndex = statusOrder.indexOf(b.status?.toLowerCase());
-    // If status not found, put at end
-    const aPos = aIndex === -1 ? 999 : aIndex;
-    const bPos = bIndex === -1 ? 999 : bIndex;
-    if (aPos !== bPos) {
-      return aPos - bPos;
-    }
-    // If same status, sort by newest first
-    return new Date(b.createdAt) - new Date(a.createdAt);
-  });
-
-  // THEN apply pagination to the sorted results
-  const orders = allOrders.slice(skip, skip + limit);
 
   res.status(200).json({
     message: "Orders found successfully",

@@ -9,6 +9,7 @@ import {
   updateOrder,
   updateOrderStatus,
   getorderByUser,
+  updateOrderItems,
 } from "../controllers/order.controller.js";
 
 import { validate } from "../middleware/validation/execution.js";
@@ -37,6 +38,12 @@ orderRoutes.put(
   auth(["admin", "operation", "waiter"]),
   checkRole(["admin", "operation", "waiter"]),
   updateOrder
+);
+orderRoutes.put(
+  "/items/:id",
+  auth(["admin", "operation", "waiter"]),
+  checkRole(["admin", "operation", "waiter"]),
+  updateOrderItems
 );
 orderRoutes.patch(
   "/",
