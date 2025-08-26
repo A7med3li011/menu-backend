@@ -288,7 +288,24 @@ export const deleteCustomProduct = handlerAsync(async (req, res, next) => {
 
 export const createOrderFromIngredients = handlerAsync(
   async (req, res, next) => {
-    const { customProducts, orderType = "delivery", location } = req.body;
+    const {
+      customProducts,
+      orderType = "delivery",
+      location,
+      locationMap,
+    } = req.body;
+
+    const location1 =
+      typeof location === "string" ? JSON.parse(location) : location;
+
+    if (!location || !locationMap) {
+      return next(
+        new AppError(
+          "Location and Location Map is required for delivery orders",
+          400
+        )
+      );
+    }
 
     if (!Array.isArray(customProducts) || customProducts.length === 0) {
       return next(
@@ -375,7 +392,8 @@ export const createOrderFromIngredients = handlerAsync(
         items: orderItems,
         orderType: orderType,
         OrderNumber: randomNumber,
-        location: location || "",
+        location: location1 || undefined,
+        locationMap,
         totalPrice: parseFloat(totalPrice.toFixed(2)),
         customer: req.user._id,
       });

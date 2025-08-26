@@ -149,7 +149,17 @@ export const updateOffer = handlerAsync(async (req, res, next) => {
 });
 
 export const createOrderOffer = handlerAsync(async (req, res, next) => {
-  const { customer, offerId, orderType, location, fromApp = false } = req.body;
+  const {
+    customer,
+    offerId,
+    orderType,
+    location,
+    locationMap,
+    fromApp = false,
+  } = req.body;
+
+  const location1 =
+    typeof location === "string" ? JSON.parse(location) : location;
 
   if (!customer || !offerId || !orderType) {
     return next(
@@ -165,12 +175,19 @@ export const createOrderOffer = handlerAsync(async (req, res, next) => {
     );
   }
 
-  // Validate location for delivery orders
+  if (!location || !locationMap) {
+    return next(
+      new AppError(
+        "Location and Location Map is required for delivery orders",
+        400
+      )
+    );
+  }
+
   if (orderType === "delivery" && !location) {
     return next(new AppError("Location is required for delivery orders", 400));
   }
 
-  // Find and validate offer
   const offer = await offerModel
     .findById(offerId)
     .populate("items", "title price");
@@ -211,7 +228,8 @@ export const createOrderOffer = handlerAsync(async (req, res, next) => {
     status: "pending",
     paymentStatus: "unpaid",
     OrderNumber: randomNumber,
-    location: orderType === "delivery" ? location : "",
+    location: orderType === "delivery" ? location1 : undefined,
+    locationMap,
     fromApp,
     Offer: offerId,
   };
