@@ -59,8 +59,8 @@ orderRoutes.get(
 );
 orderRoutes.get(
   "/",
-  // auth(["admin", "operation", "waiter"]),
-  // checkRole(["admin", "operation", "waiter"]),
+  auth(["admin", "operation", "waiter"]),
+  checkRole(["admin", "operation", "waiter"]),
   getAllOrders
 );
 orderRoutes.get(

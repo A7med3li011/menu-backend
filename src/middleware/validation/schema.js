@@ -71,9 +71,9 @@ export const staffValidationSchema = Joi.object({
     "any.required": "Role is required",
   }),
 
-  access: Joi.array().items(Joi.string()).min(1).required().messages({
-    "array.min": "At least one access level must be selected",
-    "any.required": "Access permissions are required",
+  sections: Joi.array().items(Joi.string()).min(1).required().messages({
+    "array.min": "At least one sections level must be selected",
+    "any.required": "sections permissions are required",
   }),
 });
 export const updatestaffValidationSchema = Joi.object({
@@ -129,9 +129,9 @@ export const updatestaffValidationSchema = Joi.object({
     "any.required": "Role is required",
   }),
 
-  access: Joi.array().items(Joi.string()).min(1).required().messages({
-    "array.min": "At least one access level must be selected",
-    "any.required": "Access permissions are required",
+  sections: Joi.array().items(Joi.string()).min(1).required().messages({
+    "array.min": "At least one sections level must be selected",
+    "any.required": "sections permissions are required",
   }),
 });
 

@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema(
       default: "customer",
     },
     permissions: [{ type: String }],
+    sections: [{ type: mongoose.Schema.ObjectId, ref: "Section" }],
   },
 
   { timestamps: true }

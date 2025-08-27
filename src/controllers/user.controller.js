@@ -30,7 +30,7 @@ export const handle_add_staff = handlerAsync(async (req, res, next) => {
     password,
     role,
     phone,
-    access,
+    sections,
     shiftFrom,
     shiftTo,
     age,
@@ -48,7 +48,7 @@ export const handle_add_staff = handlerAsync(async (req, res, next) => {
     password: hashedPassword,
     role,
     phone,
-    permissions: access,
+    sections: sections,
     shiftFrom,
     shiftTo,
     age,
@@ -73,7 +73,7 @@ export const handle_update_staff = handlerAsync(async (req, res, next) => {
   }
   const data = await userModel.findByIdAndUpdate(id, {
     ...body,
-    permissions: body.access,
+    sections: body.sections,
   });
   res.status(200).json({ message: "user updated successfully" });
 });

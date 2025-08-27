@@ -17,6 +17,10 @@ const tablesSchema = new mongoose.Schema({
     enum: ["Available", "Occupied", "Reserved"],
     default: "Available",
   },
+  section: {
+    type: mongoose.Types.ObjectId,
+    ref: "Section",
+  },
 });
 
 const tableModel = mongoose.model("Table", tablesSchema);

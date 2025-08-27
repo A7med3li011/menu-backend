@@ -5,6 +5,7 @@ import { AppError } from "../utilities/AppError.js";
 import { handlerAsync } from "../utilities/handleAsync.js";
 import tableModel from "../../DataBase/models/Tables.model.js";
 import userModel from "../../DataBase/models/user.model.js";
+import mongoose from "mongoose";
 
 export const createOrder = handlerAsync(async (req, res, next) => {
   const { items, orderType, location, locationMap, table } = req.body;
@@ -275,6 +276,9 @@ export const getAllOrders = handlerAsync(async (req, res, next) => {
     delete query.status;
   }
 
+  if (req?.user?.role == "waiter") {
+    query.customer = new mongoose.Types.ObjectId(req.user._id);
+  }
   if (search) {
     const regex = new RegExp(search, "i");
     query.$or = [
@@ -285,6 +289,7 @@ export const getAllOrders = handlerAsync(async (req, res, next) => {
     ];
   }
 
+  console.log(query);
   const pipeline = [
     { $match: query },
     {
