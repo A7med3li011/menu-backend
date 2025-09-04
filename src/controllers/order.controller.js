@@ -664,10 +664,21 @@ export const revenueMonthly = handlerAsync(async (req, res, next) => {
 
 export const getOrderBYKitchen = handlerAsync(async (req, res, next) => {
   const { id } = req.params;
-  console.log;
+
+  // Calculate date range for today and yesterday
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Start of today
+
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1); // Start of yesterday
+
   const orders = await orderMdoel
     .find({
       status: { $ne: "cancelled" },
+      createdAt: {
+        $gte: yesterday, // From start of yesterday
+        $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000), // Until end of today
+      },
       $or: [
         { "items.product": { $exists: true } },
         { "items.customProduct": { $exists: true } },
@@ -686,7 +697,9 @@ export const getOrderBYKitchen = handlerAsync(async (req, res, next) => {
       },
     })
     .populate("table")
-    .lean(); // Filter orders to only include those with items that match the kitchen
+    .lean();
+
+  // Filter orders to only include those with items that match the kitchen
   const filteredOrders = orders
     .map((order) => ({
       ...order,
