@@ -270,6 +270,9 @@ export const getAllOrders = handlerAsync(async (req, res, next) => {
   if (from == 1) {
     query.orderType = "delivery";
   }
+  if (from == 2) {
+    query.orderType = "dine-in";
+  }
   if (req.query.filter != "all") {
     query.status = req.query.filter;
   } else {

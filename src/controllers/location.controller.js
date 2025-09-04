@@ -3,7 +3,7 @@ import { AppError } from "../utilities/AppError.js";
 import { handlerAsync } from "../utilities/handleAsync.js";
 
 export const createLocation = handlerAsync(async (req, res, next) => {
-  const { name, deliveryPrice, lat, lng } = req.body;
+  const { name, deliveryPrice, lat, lng, isActive } = req.body;
   if (!name || lat == undefined || lng == undefined) {
     return next(new AppError("name, lat and lng are required", 400));
   }
@@ -32,6 +32,7 @@ export const createLocation = handlerAsync(async (req, res, next) => {
     deliveryPrice,
     lat,
     lng,
+    isActive,
   });
 
   res
@@ -58,6 +59,12 @@ export const deleteLocation = handlerAsync(async (req, res, next) => {
 
 export const updateLocation = handlerAsync(async (req, res, next) => {
   const { id } = req.params;
+  if (!req.body.deliveryPrice) {
+    return next(new AppError("delivery price is required !", 400));
+  }
+  if (req.body.deliveryPrice < 0) {
+    return next(new AppError("delivery price cannot be negative !", 400));
+  }
 
   const location = await locationModel.findByIdAndUpdate(id, req.body, {
     new: true,

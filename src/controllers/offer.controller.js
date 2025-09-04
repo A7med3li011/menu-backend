@@ -151,6 +151,7 @@ export const updateOffer = handlerAsync(async (req, res, next) => {
 export const createOrderOffer = handlerAsync(async (req, res, next) => {
   const {
     customer,
+    kitchen,
     offerId,
     orderType,
     location,
