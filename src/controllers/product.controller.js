@@ -18,7 +18,7 @@ export const addProduct = handlerAsync(async (req, res, next) => {
     description,
   } = req.body;
 
-  console.log(req.body);
+
 
   const categoryExist = await categoryModel.findById({ _id: category });
   if (!categoryExist) return next(new AppError("category is not exist", 404));

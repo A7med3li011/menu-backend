@@ -8,7 +8,8 @@ import userModel from "../../DataBase/models/user.model.js";
 import mongoose from "mongoose";
 
 export const createOrder = handlerAsync(async (req, res, next) => {
-  const { items, orderType, location, locationMap, table } = req.body;
+  const { items, orderType, location, locationMap, table, guestCount } =
+    req.body;
 
   if (orderType === "delivery") {
     if (!location || !locationMap) {
@@ -56,10 +57,60 @@ export const createOrder = handlerAsync(async (req, res, next) => {
     locationMap: orderType == "delivery" ? locationMap : undefined,
     totalPrice,
     customer: req.user._id,
+    guestCount: guestCount || 0,
   });
 
   res.status(201).json({ message: "order created successfully" });
 });
+export const MergeOrder = handlerAsync(async (req, res, next) => {
+  const { orderId, tableId } = req.body;
+
+  const firstOrder = await orderMdoel.findById(orderId);
+  if (!firstOrder) return next(new AppError("Order not found", 404));
+
+  const secondOrder = await orderMdoel
+    .findOne({
+      table: tableId,
+      status: { $nin: ["checkout", "cancelled"] },
+    })
+    .sort({ createdAt: -1 });
+
+  // ❌ if no active order exists on that table
+  
+  if (!secondOrder) {
+    return next(new AppError("There is no active order in this table", 404));
+  }
+
+  // ✅ merge logic
+  // Merge items
+  const mergedItems = [...secondOrder.items];
+  firstOrder.items.forEach((item) => {
+    const existingItem = mergedItems.find(
+      (i) => i.product.toString() === item.product.toString()
+    );
+    if (existingItem) {
+      existingItem.quantity += item.quantity;
+    } else {
+      mergedItems.push(item);
+    }
+  });
+
+  secondOrder.items = mergedItems;
+  secondOrder.guestCount += firstOrder.guestCount;
+  secondOrder.totalPrice += firstOrder.totalPrice;
+
+  await secondOrder.save();
+
+  await tableModel.findByIdAndUpdate(firstOrder.table, { status: "Available" });
+  // Optionally delete the merged order or mark it as merged
+  await orderMdoel.findByIdAndDelete(orderId);
+
+  res.status(201).json({
+    message: "Orders merged successfully",
+    mergedOrder: secondOrder,
+  });
+});
+
 export const updateOrder = handlerAsync(async (req, res, next) => {
   const { id } = req.params;
   const orderExist = await orderMdoel.findById({ _id: id });
@@ -292,7 +343,7 @@ export const getAllOrders = handlerAsync(async (req, res, next) => {
     ];
   }
 
-  console.log(query);
+
   const pipeline = [
     { $match: query },
     {

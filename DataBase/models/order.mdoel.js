@@ -74,6 +74,9 @@ const orderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Table", // or 'Product' if it's a generic store
     },
+    guestCount: {
+      type: Number,
+    },
     orderType: {
       type: String,
       enum: ["dine-in", "takeaway", "delivery"],
@@ -81,7 +84,14 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "preparing", "ready", "completed", "cancelled"],
+      enum: [
+        "pending",
+        "preparing",
+        "ready",
+        "completed",
+        "cancelled",
+        "checkout",
+      ],
       default: "pending",
     },
     paymentStatus: {

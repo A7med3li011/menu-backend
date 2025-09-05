@@ -200,6 +200,7 @@ export const createOrderSchema = Joi.object({
   locationMap: Joi.string().optional(),
   tableNumber: Joi.string().optional().allow(""),
   table: Joi.string().optional(),
+  guestCount: Joi.number().optional(),
   specialInstructions: Joi.string(),
   items: Joi.array()
     .items(
@@ -221,6 +222,26 @@ export const createOrderSchema = Joi.object({
     )
     .min(1)
     .required(), // 👈 requires at least one item
+});
+export const mergeOrderSchema = Joi.object({
+  orderId: Joi.string()
+    .custom((value, helpers) => {
+      // Check if the categoryId is a valid ObjectId
+      if (!mongoose.Types.ObjectId.isValid(value)) {
+        return helpers.message("Order ID must be a valid ObjectId");
+      }
+      return value;
+    })
+    .required(),
+  tableId: Joi.string()
+    .custom((value, helpers) => {
+      // Check if the categoryId is a valid ObjectId
+      if (!mongoose.Types.ObjectId.isValid(value)) {
+        return helpers.message("Table ID must be a valid ObjectId");
+      }
+      return value;
+    })
+    .required(),
 });
 
 export const updateTableSchema = Joi.object({
