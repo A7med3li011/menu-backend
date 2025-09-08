@@ -11,6 +11,7 @@ export const createOrder = handlerAsync(async (req, res, next) => {
   const { items, orderType, location, locationMap, table, guestCount } =
     req.body;
 
+  console.log(items);
   if (orderType === "delivery") {
     if (!location || !locationMap) {
       return next(
@@ -48,6 +49,12 @@ export const createOrder = handlerAsync(async (req, res, next) => {
   }
   const randomNumber = nanoidNumber();
 
+  let UTP = 0;
+  if (guestCount) {
+    const totlQan = items.reduce((acc, curr) => acc + Number(curr.quantity), 0);
+
+    UTP = totlQan / Number(guestCount);
+  }
   const order = await orderMdoel.create({
     items,
     orderType,
@@ -58,6 +65,7 @@ export const createOrder = handlerAsync(async (req, res, next) => {
     totalPrice,
     customer: req.user._id,
     guestCount: guestCount || 0,
+    UTP,
   });
 
   res.status(201).json({ message: "order created successfully" });
@@ -76,7 +84,7 @@ export const MergeOrder = handlerAsync(async (req, res, next) => {
     .sort({ createdAt: -1 });
 
   // ❌ if no active order exists on that table
-  
+
   if (!secondOrder) {
     return next(new AppError("There is no active order in this table", 404));
   }
@@ -99,6 +107,11 @@ export const MergeOrder = handlerAsync(async (req, res, next) => {
   secondOrder.guestCount += firstOrder.guestCount;
   secondOrder.totalPrice += firstOrder.totalPrice;
 
+  let totalQunt = secondOrder?.items?.reduce(
+    (acc, curr) => acc + curr.quantity,
+    0
+  );
+  secondOrder.UTP = Number(totalQunt) / Number(secondOrder.guestCount);
   await secondOrder.save();
 
   await tableModel.findByIdAndUpdate(firstOrder.table, { status: "Available" });
@@ -342,7 +355,6 @@ export const getAllOrders = handlerAsync(async (req, res, next) => {
       { orderType: regex },
     ];
   }
-
 
   const pipeline = [
     { $match: query },

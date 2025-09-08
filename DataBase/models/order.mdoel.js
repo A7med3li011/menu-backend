@@ -77,6 +77,9 @@ const orderSchema = new mongoose.Schema(
     guestCount: {
       type: Number,
     },
+    UTP:{
+      type:Number
+    },
     orderType: {
       type: String,
       enum: ["dine-in", "takeaway", "delivery"],
