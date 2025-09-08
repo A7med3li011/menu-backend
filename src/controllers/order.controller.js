@@ -172,6 +172,8 @@ export const updateOrderItems = handlerAsync(async (req, res, next) => {
     _id: ele._id,
   }));
 
+  const newQuantity = arr.reduce((acc, curr) => acc + Number(curr.quantity), 0);
+  orderExist.UTP = Number(newQuantity) / Number(orderExist.guestCount);
   orderExist.items = arr;
   orderExist.totalPrice = totalPrice;
   await orderExist.save();
