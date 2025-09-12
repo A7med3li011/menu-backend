@@ -131,11 +131,70 @@ export const updateOrder = handlerAsync(async (req, res, next) => {
   await orderMdoel.findByIdAndUpdate({ _id: id }, { ...req.body });
   res.status(200).json({ message: "order updated successfully" });
 });
+
+export const checkoutOrder = handlerAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  const { visaNumber, visaAmount, cashAmount, paymentWay } = req.body;
+
+  console.log(visaNumber, visaAmount, cashAmount, paymentWay);
+
+  const orderExist = await orderMdoel.findById({ _id: id });
+  if (!orderExist) next(new AppError("order not found", 404));
+
+  if (orderExist.checkout)
+    return next(new AppError("order already checkedout"));
+
+  if (orderExist.status === "cancelled")
+    return next(new AppError("order already cancelled"));
+  if (orderExist.status !== "completed")
+    return next(new AppError("order hasn't completed yet"));
+
+  if (paymentWay == "cash") {
+    if (cashAmount != orderExist.totalPrice)
+      return next(new AppError("cash amout not equale order's total price"));
+  } else if (paymentWay == "visa") {
+    if (!visaNumber) return next(new AppError("visa number is required"));
+    if (visaAmount != orderExist.totalPrice)
+      return next(new AppError("visa amout not equale order's total price"));
+  } else if (paymentWay == "hybrid") {
+    if (!visaNumber) return next(new AppError("visa number is required"));
+    if (Number(visaAmount) + Number(cashAmount) != orderExist.totalPrice)
+      return next(
+        new AppError(
+          "visa amout plus cash amount not equale order's total price"
+        )
+      );
+  }
+
+  await orderMdoel.findByIdAndUpdate(
+    { _id: id },
+    {
+      paymentWay,
+      cashAmount,
+      visaAmount: visaAmount || 0,
+      visaNumber: visaNumber || 0,
+      checkout: true,
+      status: "checkout",
+    }
+  );
+
+  await tableModel.findByIdAndUpdate(orderExist.table, {
+    status: "Available",
+  });
+  res.status(200).json({ message: "checkout successfully" });
+});
+
 export const updateOrderItems = handlerAsync(async (req, res, next) => {
   const { id } = req.params;
   const { items } = req.body;
   const orderExist = await orderMdoel.findById({ _id: id });
   if (!orderExist) next(new AppError("order not found", 404));
+
+  if (orderExist.status === "cancelled")
+    return next(new AppError("order already cancelled"));
+  if (orderExist.checkout)
+    return next(new AppError("order already checkedout"));
 
   if (!items.length) {
     await orderMdoel.findByIdAndDelete(id);
@@ -180,6 +239,7 @@ export const updateOrderItems = handlerAsync(async (req, res, next) => {
 
   res.status(200).json({ message: "order updated successfully" });
 });
+
 export const updateOrderStatus = handlerAsync(async (req, res, next) => {
   const { orderId, itemId, status } = req.body;
   const orderExist = await orderMdoel.findById({ _id: orderId });

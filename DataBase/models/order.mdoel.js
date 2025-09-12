@@ -77,8 +77,8 @@ const orderSchema = new mongoose.Schema(
     guestCount: {
       type: Number,
     },
-    UTP:{
-      type:Number
+    UTP: {
+      type: Number,
     },
     orderType: {
       type: String,
@@ -117,6 +117,25 @@ const orderSchema = new mongoose.Schema(
     fromApp: {
       type: Boolean,
       default: false,
+    },
+    checkout: {
+      type: Boolean,
+      default: false,
+    },
+    paymentWay: {
+      type: String,
+      enum: ["cash", "visa", "hybrid"],
+    },
+    cashAmount: {
+      type: Number,
+      default: 0,
+    },
+    visaAmount: {
+      type: Number,
+      default: 0,
+    },
+    visaNumber: {
+      type: String,
     },
   },
   { timestamps: true }

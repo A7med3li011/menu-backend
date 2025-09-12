@@ -11,6 +11,7 @@ import {
   getorderByUser,
   updateOrderItems,
   MergeOrder,
+  checkoutOrder,
 } from "../controllers/order.controller.js";
 
 import { validate } from "../middleware/validation/execution.js";
@@ -49,6 +50,12 @@ orderRoutes.put(
   auth(["admin", "operation", "waiter"]),
   checkRole(["admin", "operation", "waiter"]),
   updateOrder
+);
+orderRoutes.put(
+  "/checkout/:id",
+  auth(["admin", "operation", "waiter"]),
+  checkRole(["admin", "operation", "waiter"]),
+  checkoutOrder
 );
 orderRoutes.put(
   "/items/:id",
