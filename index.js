@@ -19,6 +19,9 @@ import ingredientRoutes from "./src/Routes/ingredient.routes.js";
 import customProductRoutes from "./src/Routes/customProduct.routes.js";
 import locationRoutes from "./src/Routes/location.routes.js";
 import sectionRoutes from "./src/Routes/section.routes.js";
+import supplierRoutes from "./src/Routes/supplier.routes.js";
+import inventoryRoutes from "./src/Routes/inventory.routes.js";
+import purchaseRoutes from "./src/Routes/purchase.routes.js";
 
 connection();
 const app = express();
@@ -42,6 +45,9 @@ app.use("/api/v1/ingredients", ingredientRoutes);
 app.use("/api/v1/custom-products", customProductRoutes);
 app.use("/api/v1/location", locationRoutes);
 app.use("/api/v1/section", sectionRoutes);
+app.use("/api/v1/supplier", supplierRoutes);
+app.use("/api/v1/inventory", inventoryRoutes);
+app.use("/api/v1/purchase", purchaseRoutes  );
 
 // handle foriegn routes
 app.all("*", (req, res, next) => {

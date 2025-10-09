@@ -247,3 +247,59 @@ export const mergeOrderSchema = Joi.object({
 export const updateTableSchema = Joi.object({
   status: Joi.string().valid("Available", "Occupied", "Reserved"),
 });
+
+export const createSupplierSchema = Joi.object({
+  name: Joi.string().required().min(3).max(30),
+  email: Joi.string().email().required(),
+  code: Joi.string().required().max(12),
+  type: Joi.string().required().valid("company", "individual", "distributor"),
+  phone: Joi.string().required().min(5).max(15),
+  address: Joi.string().required().min(10).max(100),
+});
+export const statusSupplierSchema = Joi.object({
+  status: Joi.string().required().valid("active", "inActive"),
+});
+export const createInventoryItem = Joi.object({
+  productName: Joi.string().required().min(3).max(30),
+  price: Joi.number().required().positive().min(1),
+  quantity: Joi.number().required().integer().min(1).positive(),
+  unit: Joi.string().required(),
+});
+export const updateInventoryItem = Joi.object({
+  productName: Joi.string().required().min(3).max(30),
+  price: Joi.number().required().positive().min(1),
+  quantity: Joi.number().required().integer().min(1).positive(),
+  unit: Joi.string().required(),
+  code: Joi.string().required(),
+});
+export const createPurchaseSchema = Joi.object({
+  title: Joi.string().required().min(3).max(30),
+  supplierId: Joi.string()
+    .custom((value, helpers) => {
+      // Check if the categoryId is a valid ObjectId
+      if (!mongoose.Types.ObjectId.isValid(value)) {
+        return helpers.message("Supplier ID must be a valid ObjectId");
+      }
+      return value;
+    })
+    .required(),
+  items: Joi.array()
+    .items(
+      Joi.object({
+        inventoryId: Joi.string()
+          .custom((value, helpers) => {
+            // Check if the categoryId is a valid ObjectId
+            if (!mongoose.Types.ObjectId.isValid(value)) {
+              return helpers.message("Supplier ID must be a valid ObjectId");
+            }
+            return value;
+          })
+          .required(),
+        price: Joi.number().required(),
+        quantity: Joi.number().required().positive().min(1),
+        total: Joi.number().required().positive().min(1),
+      })
+    )
+    .min(1),
+  paidAmount: Joi.number().required().positive().min(1),
+});
