@@ -75,6 +75,7 @@ export const createPurchase = handlerAsync(async (req, res, next) => {
 export const getPurchasesBySupplier = handlerAsync(async (req, res, next) => {
   const { supplierId } = req.params;
 
+
   const supplierExist = await supplierModel.findById(supplierId);
   if (!supplierExist) return next(new AppError("supplier not found", 404));
 
@@ -82,6 +83,8 @@ export const getPurchasesBySupplier = handlerAsync(async (req, res, next) => {
     path:"items.inventoryId",
     select:"productName"
   });
+
+  
 
   res
     .status(200)
