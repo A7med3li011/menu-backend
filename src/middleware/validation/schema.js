@@ -303,3 +303,26 @@ export const createPurchaseSchema = Joi.object({
     .min(1),
   paidAmount: Joi.number().required().positive().min(1),
 });
+export const updatePurchaseSchema = Joi.object({
+  title: Joi.string().required().min(3).max(30),
+ 
+  items: Joi.array()
+    .items(
+      Joi.object({
+        inventoryId: Joi.string()
+          .custom((value, helpers) => {
+            // Check if the categoryId is a valid ObjectId
+            if (!mongoose.Types.ObjectId.isValid(value)) {
+              return helpers.message("Supplier ID must be a valid ObjectId");
+            }
+            return value;
+          })
+          .required(),
+        price: Joi.number().required(),
+        quantity: Joi.number().required().positive().min(1),
+        total: Joi.number().required().positive().min(1),
+      })
+    )
+    .min(1),
+  paidAmount: Joi.number().required().positive().min(1),
+});

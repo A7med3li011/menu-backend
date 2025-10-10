@@ -1,12 +1,13 @@
 import express from "express";
 import {
   createPurchase,
+  exportToInventory,
   getPurchaseById,
   getPurchasesBySupplier,
   updatePurchase,
 } from "../controllers/purchase.controller.js";
 import { validate } from "../middleware/validation/execution.js";
-import { createPurchaseSchema } from "../middleware/validation/schema.js";
+import { createPurchaseSchema, updatePurchaseSchema } from "../middleware/validation/schema.js";
 import { auth } from "../middleware/auth/auth.js";
 
 const purchaseRoutes = express.Router();
@@ -17,8 +18,9 @@ purchaseRoutes.post(
   auth(["admin"]),
   createPurchase
 );
-purchaseRoutes.put("/", updatePurchase);
-purchaseRoutes.get("/supplier/:supplierId", getPurchasesBySupplier);
-purchaseRoutes.get("/:id", getPurchaseById);
+purchaseRoutes.put("/:id",  validate(updatePurchaseSchema), auth(["admin"]), updatePurchase);
+purchaseRoutes.put("/export/:id",  auth(["admin"]), exportToInventory);
+purchaseRoutes.get("/supplier/:supplierId",  auth(["admin"]),getPurchasesBySupplier);
+purchaseRoutes.get("/:id",  auth(["admin"]),getPurchaseById);
 
 export default purchaseRoutes;

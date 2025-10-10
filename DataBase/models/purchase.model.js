@@ -45,6 +45,10 @@ const purchaseSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
+  exported:{
+    type:Boolean,
+    default:false,
+  },
 
   createdBy: {
     type: mongoose.Types.ObjectId,
