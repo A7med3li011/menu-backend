@@ -267,8 +267,8 @@ export const createInventoryItem = Joi.object({
 });
 export const updateInventoryItem = Joi.object({
   productName: Joi.string().required().min(3).max(30),
-  price: Joi.number().required().positive().min(1),
-  quantity: Joi.number().required().integer().min(1).positive(),
+  // price: Joi.number().required().positive().min(1),
+  // quantity: Joi.number().required().integer().min(1).positive(),
   unit: Joi.string().required(),
   code: Joi.string().required(),
 });

@@ -1,7 +1,7 @@
 import express from "express";
 import {
   createPurchase,
-  exportToInventory,
+  
   getPurchaseById,
   getPurchasesBySupplier,
   updatePurchase,
@@ -19,7 +19,7 @@ purchaseRoutes.post(
   createPurchase
 );
 purchaseRoutes.put("/:id",  validate(updatePurchaseSchema), auth(["admin"]), updatePurchase);
-purchaseRoutes.put("/export/:id",  auth(["admin"]), exportToInventory);
+// purchaseRoutes.put("/export/:id",  auth(["admin"]), exportToInventory);
 purchaseRoutes.get("/supplier/:supplierId",  auth(["admin"]),getPurchasesBySupplier);
 purchaseRoutes.get("/:id",  auth(["admin"]),getPurchaseById);
 

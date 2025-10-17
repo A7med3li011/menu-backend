@@ -4,72 +4,119 @@ import supplierModel from "../../DataBase/models/supplier.model.js";
 import { AppError } from "../utilities/AppError.js";
 import { handlerAsync } from "../utilities/handleAsync.js";
 import purchaseModel from "../../DataBase/models/purchase.model.js";
+import StockBatch from "../../DataBase/models/stockBatch.js";
+import mongoose from "mongoose";
 
 export const createPurchase = handlerAsync(async (req, res, next) => {
-  const {
-    title,
-    supplierId,
-    items,
+  const { title, supplierId, items, paidAmount } = req.body;
 
-    paidAmount,
-  } = req.body;
+  // Start MongoDB session
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  const supplierExist = await supplierModel.findById(supplierId);
+  try {
+    // 1️⃣ Validate Supplier
+    const supplierExist = await supplierModel.findById(supplierId).session(session);
+    if (!supplierExist) throw new AppError("Supplier not found", 404);
+    if (supplierExist.status === "inActive")
+      throw new AppError("Please activate supplier before making purchase", 400);
 
-  if (!supplierExist) return next(new AppError("supplier not found", 404));
-
-  if (supplierExist.status === "inActive")
-    return next(
-      new AppError("please activate supplier before making purchase", 404)
-    );
-
-  let newPurchase = {};
-  const checkingItems = await Promise.all(
-    items.map((ele, index) =>
-      inventoryModel.findById(ele.inventoryId).then((itemExist) => {
+    // 2️⃣ Validate Items
+    const checkingItems = await Promise.all(
+      items.map(async (ele, index) => {
+        const itemExist = await inventoryModel.findById(ele.inventoryId).session(session);
         if (!itemExist) {
-          throw new AppError(
-            `item number ${index + 1} not found in inventory`,
-            404
-          );
+          throw new AppError(`Item number ${index + 1} not found in inventory`, 404);
         }
         return itemExist;
       })
-    )
-  );
+    );
 
-  newPurchase.items = items;
-  newPurchase.title = title;
+    // 3️⃣ Build Purchase Object
+    let newPurchase = { title, supplierId, items };
 
-  const estimatedPrice = items.reduce(
-    (acc, curr) => acc + Number(curr.price * curr.quantity),
-    0
-  );
+    const estimatedPrice = items.reduce(
+      (acc, curr) => acc + Number(curr.price * curr.quantity),
+      0
+    );
 
-  if (Number(estimatedPrice) === Number(paidAmount)) {
-    newPurchase = {
-      ...newPurchase,
-      paidAmount,
-      dueAmount: 0,
-      paymentStatus: "paid",
-    };
-  } else if (Number(estimatedPrice) > Number(paidAmount)) {
-    newPurchase = {
-      ...newPurchase,
-      paidAmount,
-      dueAmount: Number(estimatedPrice) - Number(paidAmount),
-      paymentStatus: "partial",
-    };
-  } else {
-    return next(new AppError("paid amount is larger than total cost"));
+    if (Number(estimatedPrice) === Number(paidAmount)) {
+      newPurchase = {
+        ...newPurchase,
+        paidAmount,
+        dueAmount: 0,
+        paymentStatus: "paid",
+      };
+    } else if (Number(estimatedPrice) > Number(paidAmount)) {
+      newPurchase = {
+        ...newPurchase,
+        paidAmount,
+        dueAmount: Number(estimatedPrice) - Number(paidAmount),
+        paymentStatus: "partial",
+      };
+    } else {
+      throw new AppError("Paid amount is larger than total cost", 400);
+    }
+
+    const nanoId = customAlphabet("123456789", 7);
+    newPurchase.invoiceNumber = nanoId();
+    newPurchase.totalAmount = estimatedPrice; // ✅ ADDED
+
+    // 4️⃣ Create Purchase
+    const [purchaseDoc] = await purchaseModel.create([newPurchase], { session });
+
+    // 5️⃣ Create Stock Batches + Update Inventory (FIFO)
+    for (const item of items) {
+      const inventory = checkingItems.find(
+        (inv) => inv._id.toString() === item.inventoryId
+      );
+
+      // Create Stock Batch for FIFO tracking
+      await StockBatch.create(
+        [
+          {
+            inventoryId: item.inventoryId,
+            purchaseId: purchaseDoc._id,
+            supplierId,
+            quantity: item.quantity,
+            remainingQuantity: item.quantity,
+            unitCost: item.price,
+            status: "active", // ✅ ADDED
+          },
+        ],
+        { session }
+      );
+
+      // ✅ UPDATE INVENTORY WITH FIFO LOGIC
+      const itemTotal = item.quantity * item.price;
+
+      inventory.quantity += item.quantity;
+      inventory.totalValue = (inventory.totalValue || 0) + itemTotal;
+      inventory.averagePrice = inventory.totalValue / inventory.quantity;
+
+      if (inventory.quantity === 0) inventory.status = "out-of-stock";
+      else if (inventory.quantity <= 5) inventory.status = "low-stock";
+      else inventory.status = "in-stock";
+
+      inventory.updatedBy = req.user._id;
+      await inventory.save({ session });
+    }
+
+    // 6️⃣ Commit Transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json({
+      success: true,
+      message: "Purchase created and inventory updated successfully",
+      purchase: purchaseDoc,
+    });
+  } catch (error) {
+    // ❌ Rollback All Changes
+    await session.abortTransaction();
+    session.endSession();
+    next(error);
   }
-
-  const nanoId = customAlphabet("123456789", 7);
-  newPurchase.invoiceNumber = nanoId();
-  newPurchase.supplierId = supplierId;
-
-  await purchaseModel.create(newPurchase);
-  res.status(200).json({ message: "purchase process completed successfully" });
 });
 
 export const getPurchasesBySupplier = handlerAsync(async (req, res, next) => {
@@ -119,10 +166,10 @@ export const updatePurchase = handlerAsync(async (req, res, next) => {
     items.map((ele, index) =>
       inventoryModel.findById(ele.inventoryId).then((itemExist) => {
         if (!itemExist) {
-          throw new AppError(
+         return next( AppError(
             `item number ${index + 1} not found in inventory`,
             404
-          );
+          ));
         }
         return itemExist;
       })
@@ -161,38 +208,5 @@ export const updatePurchase = handlerAsync(async (req, res, next) => {
 
 
 });
-export const exportToInventory = handlerAsync(async (req, res, next) => {
-  const { id } = req.params;
 
-  // Find the purchase as a Mongoose document (no .lean())
-  const purchaseExist = await purchaseModel.findById(id);
-
-  if (!purchaseExist) return next(new AppError("Purchase not found", 404));
-
-  if (purchaseExist.exported)
-    return next(new AppError("Already exported to inventory", 409));
-
-  const items = purchaseExist.items;
-
-  // Update all inventory items
-  const updatePromises = items.map(async (item) => {
-    const itemExist = await inventoryModel.findById(item.inventoryId);
-    if (!itemExist)
-      throw new AppError(`Inventory item not found: ${item.inventoryId}`, 404);
-
-    itemExist.price = item.price;
-    itemExist.quantity += item.quantity;
-    itemExist.status = "in-stock";
-
-    await itemExist.save();
-  });
-
-  await Promise.all(updatePromises);
-
-  // Mark purchase as exported
-  purchaseExist.exported = true;
-  await purchaseExist.save();
-
-  res.status(200).json({ message: "Inventory updated successfully" });
-});
 

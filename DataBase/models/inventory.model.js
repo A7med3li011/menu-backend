@@ -5,10 +5,11 @@ const inventorySchema = new mongoose.Schema(
     productName: { type: String, required: true, trim: true },
     code: { type: String, required: true, trim: true },
     quantity: { type: Number, default: 0, min: 0 },
-    unit: {
-      type: String,
-    },
-    price: { type: Number, default: 0, min: 0 },
+    unit: { type: String },
+    
+    
+    averagePrice: { type: Number, default: 0, min: 0 },
+    totalValue: { type: Number, default: 0, min: 0 }, // NEW: Track total inventory value
 
     status: {
       type: String,
@@ -28,5 +29,4 @@ const inventorySchema = new mongoose.Schema(
 );
 
 const inventoryModel = mongoose.model("Inventory", inventorySchema);
-
 export default inventoryModel;
