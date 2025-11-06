@@ -1,7 +1,9 @@
 import express from "express";
 import {
+  consumeInventory,
   createItem,
   deleteItem,
+  getInventoryBatches,
   getItems,
   getItemsForPurchase,
   updateItem,
@@ -9,6 +11,7 @@ import {
 import { auth } from "../middleware/auth/auth.js";
 import { validate } from "../middleware/validation/execution.js";
 import {
+  consumeInventorySchema,
   createInventoryItem,
   updateInventoryItem,
 } from "../middleware/validation/schema.js";
@@ -20,8 +23,15 @@ inventoryRoutes.post(
   validate(createInventoryItem),
   createItem
 );
+inventoryRoutes.post(
+  "/consume",
+  auth(["admin", "staff", "operation"]),
+  validate(consumeInventorySchema),
+  consumeInventory
+);
 inventoryRoutes.get("/", auth(["admin"]), getItems);
 inventoryRoutes.get("/items", auth(["admin"]), getItemsForPurchase);
+inventoryRoutes.get("/batches/:id", auth(["admin"]), getInventoryBatches);
 inventoryRoutes.put(
   "/:id",
   auth(["admin"]),

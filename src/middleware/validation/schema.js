@@ -261,8 +261,8 @@ export const statusSupplierSchema = Joi.object({
 });
 export const createInventoryItem = Joi.object({
   productName: Joi.string().required().min(3).max(30),
-  price: Joi.number().required().positive().min(1),
-  quantity: Joi.number().required().integer().min(1).positive(),
+  // price: Joi.number().required().positive().min(1),
+  // quantity: Joi.number().required().integer().min(1).positive(),
   unit: Joi.string().required(),
 });
 export const updateInventoryItem = Joi.object({
@@ -290,22 +290,22 @@ export const createPurchaseSchema = Joi.object({
           .custom((value, helpers) => {
             // Check if the categoryId is a valid ObjectId
             if (!mongoose.Types.ObjectId.isValid(value)) {
-              return helpers.message("Supplier ID must be a valid ObjectId");
+              return helpers.message("Inventory ID must be a valid ObjectId");
             }
             return value;
           })
           .required(),
-        price: Joi.number().required(),
+        price: Joi.number().required().min(0),
         quantity: Joi.number().required().positive().min(1),
-        total: Joi.number().required().positive().min(1),
+        total: Joi.number().required().min(0),
       })
     )
-    .min(1),
-  paidAmount: Joi.number().required().positive().min(1),
+    .min(1)
+    .required(),
+  paidAmount: Joi.number().required().min(0),
 });
 export const updatePurchaseSchema = Joi.object({
   title: Joi.string().required().min(3).max(30),
- 
   items: Joi.array()
     .items(
       Joi.object({
@@ -313,16 +313,45 @@ export const updatePurchaseSchema = Joi.object({
           .custom((value, helpers) => {
             // Check if the categoryId is a valid ObjectId
             if (!mongoose.Types.ObjectId.isValid(value)) {
-              return helpers.message("Supplier ID must be a valid ObjectId");
+              return helpers.message("Inventory ID must be a valid ObjectId");
             }
             return value;
           })
           .required(),
-        price: Joi.number().required(),
+        price: Joi.number().required().min(0),
         quantity: Joi.number().required().positive().min(1),
-        total: Joi.number().required().positive().min(1),
+        total: Joi.number().required().min(0),
       })
     )
-    .min(1),
-  paidAmount: Joi.number().required().positive().min(1),
+    .min(1)
+    .required(),
+  paidAmount: Joi.number().required().min(0),
+});
+
+export const consumeInventorySchema = Joi.object({
+  items: Joi.array()
+    .items(
+      Joi.object({
+        inventoryId: Joi.string()
+          .custom((value, helpers) => {
+            if (!mongoose.Types.ObjectId.isValid(value)) {
+              return helpers.message("Inventory ID must be a valid ObjectId");
+            }
+            return value;
+          })
+          .required(),
+        quantity: Joi.number().required().positive().min(0.01).messages({
+          "number.base": "Quantity must be a number",
+          "number.positive": "Quantity must be positive",
+          "number.min": "Quantity must be greater than 0",
+          "any.required": "Quantity is required",
+        }),
+      })
+    )
+    .min(1)
+    .required()
+    .messages({
+      "array.min": "At least one item is required",
+      "any.required": "Items array is required",
+    }),
 });

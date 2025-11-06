@@ -151,62 +151,188 @@ export const getPurchaseById = handlerAsync(async (req, res, next) => {
     .json({ message: "data retrieved successfully", data: purchaseExist });
 });
 export const updatePurchase = handlerAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { items, paidAmount, title } = req.body;
 
-  const {id} = req.params
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  const {items,paidAmount,title} = req.body
-  const purchaseExist = await purchaseModel.findById(id)
+  try {
+    const purchaseExist = await purchaseModel.findById(id).session(session);
+    if (!purchaseExist) throw new AppError("Purchase not found", 404);
 
-  if(!purchaseExist) return next(new AppError("purchase not found",404))
+    // Check if any stock has been consumed
+    const batches = await StockBatch.find({ purchaseId: id }).session(session);
+    const hasConsumedStock = batches.some(b => b.remainingQuantity < b.quantity);
 
-    if(purchaseExist.exported) return next(new AppError("can't update purchase after exported to inventory",409))
+    if (hasConsumedStock) {
+      throw new AppError("Cannot update purchase - stock has already been consumed", 409);
+    }
 
-      let newPurchase = {};
-  const checkingItems = await Promise.all(
-    items.map((ele, index) =>
-      inventoryModel.findById(ele.inventoryId).then((itemExist) => {
+    // 1️⃣ REVERSE original purchase from inventory
+    for (const oldItem of purchaseExist.items) {
+      const inventory = await inventoryModel.findById(oldItem.inventoryId).session(session);
+      if (!inventory) continue; // Skip if inventory item was deleted
+
+      const itemTotal = oldItem.quantity * oldItem.price;
+      inventory.quantity -= oldItem.quantity;
+      inventory.totalValue = Math.max(0, (inventory.totalValue || 0) - itemTotal);
+
+      if (inventory.quantity > 0) {
+        inventory.averagePrice = inventory.totalValue / inventory.quantity;
+      } else {
+        inventory.averagePrice = 0;
+      }
+
+      // Update status
+      if (inventory.quantity === 0) inventory.status = "out-of-stock";
+      else if (inventory.quantity <= 5) inventory.status = "low-stock";
+      else inventory.status = "in-stock";
+
+      inventory.updatedBy = req.user._id;
+      await inventory.save({ session });
+    }
+
+    // 2️⃣ DELETE old stock batches
+    await StockBatch.deleteMany({ purchaseId: id }, { session });
+
+    // 3️⃣ VALIDATE new items
+    const checkingItems = await Promise.all(
+      items.map(async (ele, index) => {
+        const itemExist = await inventoryModel.findById(ele.inventoryId).session(session);
         if (!itemExist) {
-         return next( AppError(
-            `item number ${index + 1} not found in inventory`,
-            404
-          ));
+          throw new AppError(`Item number ${index + 1} not found in inventory`, 404);
         }
         return itemExist;
       })
-    )
-  );
+    );
 
-  newPurchase.items = items;
-  newPurchase.title = title;
+    // 4️⃣ RECALCULATE pricing
+    const estimatedPrice = items.reduce(
+      (acc, curr) => acc + Number(curr.price * curr.quantity),
+      0
+    );
 
+    let newPurchase = { items, title, totalAmount: estimatedPrice };
 
-  const estimatedPrice = items.reduce(
-    (acc, curr) => acc + Number(curr.price * curr.quantity),
-    0
-  );
+    if (Number(estimatedPrice) === Number(paidAmount)) {
+      newPurchase = { ...newPurchase, paidAmount, dueAmount: 0, paymentStatus: "paid" };
+    } else if (Number(estimatedPrice) > Number(paidAmount)) {
+      newPurchase = {
+        ...newPurchase,
+        paidAmount,
+        dueAmount: Number(estimatedPrice) - Number(paidAmount),
+        paymentStatus: "partial",
+      };
+    } else {
+      throw new AppError("Paid amount cannot exceed total cost", 400);
+    }
 
-  if (Number(estimatedPrice) === Number(paidAmount)) {
-    newPurchase = {
-      ...newPurchase,
-      paidAmount,
-      dueAmount: 0,
-      paymentStatus: "paid",
-    };
-  } else if (Number(estimatedPrice) > Number(paidAmount)) {
-    newPurchase = {
-      ...newPurchase,
-      paidAmount,
-      dueAmount: Number(estimatedPrice) - Number(paidAmount),
-      paymentStatus: "partial",
-    };
-  } else {
-    return next(new AppError("paid amount is larger than total cost"));
+    // 5️⃣ CREATE new stock batches and update inventory
+    for (const item of items) {
+      const inventory = checkingItems.find(
+        (inv) => inv._id.toString() === item.inventoryId
+      );
+
+      await StockBatch.create(
+        [
+          {
+            inventoryId: item.inventoryId,
+            purchaseId: id,
+            supplierId: purchaseExist.supplierId,
+            quantity: item.quantity,
+            remainingQuantity: item.quantity,
+            unitCost: item.price,
+            status: "active",
+          },
+        ],
+        { session }
+      );
+
+      const itemTotal = item.quantity * item.price;
+      inventory.quantity += item.quantity;
+      inventory.totalValue = (inventory.totalValue || 0) + itemTotal;
+      inventory.averagePrice = inventory.totalValue / inventory.quantity;
+
+      if (inventory.quantity === 0) inventory.status = "out-of-stock";
+      else if (inventory.quantity <= 5) inventory.status = "low-stock";
+      else inventory.status = "in-stock";
+
+      inventory.updatedBy = req.user._id;
+      await inventory.save({ session });
+    }
+
+    // 6️⃣ UPDATE purchase record
+    newPurchase.updatedBy = req.user._id;
+    await purchaseModel.findByIdAndUpdate(id, newPurchase, { session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json({ message: "Purchase updated successfully" });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    next(error);
   }
+});
 
-   await purchaseModel.findByIdAndUpdate(id,newPurchase);
-  res.status(200).json({ message: "purchase update  successfully" });
+export const deletePurchase = handlerAsync(async (req, res, next) => {
+  const { id } = req.params;
 
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
+  try {
+    const purchase = await purchaseModel.findById(id).session(session);
+    if (!purchase) throw new AppError("Purchase not found", 404);
+
+    // Check if any stock has been consumed
+    const batches = await StockBatch.find({ purchaseId: id }).session(session);
+    const hasConsumedStock = batches.some(b => b.remainingQuantity < b.quantity);
+
+    if (hasConsumedStock) {
+      throw new AppError("Cannot delete purchase - stock has already been consumed", 409);
+    }
+
+    // Reverse inventory changes
+    for (const item of purchase.items) {
+      const inventory = await inventoryModel.findById(item.inventoryId).session(session);
+      if (!inventory) continue; // Skip if inventory item was deleted
+
+      const itemTotal = item.quantity * item.price;
+      inventory.quantity -= item.quantity;
+      inventory.totalValue = Math.max(0, (inventory.totalValue || 0) - itemTotal);
+
+      if (inventory.quantity > 0) {
+        inventory.averagePrice = inventory.totalValue / inventory.quantity;
+      } else {
+        inventory.averagePrice = 0;
+      }
+
+      if (inventory.quantity === 0) inventory.status = "out-of-stock";
+      else if (inventory.quantity <= 5) inventory.status = "low-stock";
+      else inventory.status = "in-stock";
+
+      inventory.updatedBy = req.user._id;
+      await inventory.save({ session });
+    }
+
+    // Delete stock batches
+    await StockBatch.deleteMany({ purchaseId: id }, { session });
+
+    // Delete purchase
+    await purchaseModel.findByIdAndDelete(id, { session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json({ message: "Purchase deleted successfully" });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    next(error);
+  }
 });
 
 

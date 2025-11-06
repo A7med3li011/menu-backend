@@ -40,14 +40,14 @@ categoryRoutes.delete(
 );
 categoryRoutes.get(
   "/",
-  auth(["admin", "operation", "waiter", "customer"]),
-  checkRole(["admin", "operation", "waiter", "customer"]),
+  // auth(["admin", "operation", "waiter", "customer"]),
+  // checkRole(["admin", "operation", "waiter", "customer"]),
   getCategories
 );
 categoryRoutes.get(
   "/:id",
-  auth(["admin", "operation", "waiter", "customer"]),
-  checkRole(["admin", "operation", "waiter", "customer"]),
+  // auth(["admin", "operation", "waiter", "customer"]),
+  // checkRole(["admin", "operation", "waiter", "customer"]),
   getCategoryByid
 );
 export default categoryRoutes;

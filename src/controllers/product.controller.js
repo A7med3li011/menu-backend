@@ -18,8 +18,6 @@ export const addProduct = handlerAsync(async (req, res, next) => {
     description,
   } = req.body;
 
-
-
   const categoryExist = await categoryModel.findById({ _id: category });
   if (!categoryExist) return next(new AppError("category is not exist", 404));
   const subcategoryExist = await subCategoryModel.findById(subCategory);
@@ -94,7 +92,7 @@ export const getProductsbyId = handlerAsync(async (req, res, next) => {
 export const getProductsbySub = handlerAsync(async (req, res, next) => {
   const { id } = req.params;
   const products = await productModel
-    .find({ subCategory: id }, null, { isFavouriteFor: req.user._id })
+    .find({ subCategory: id })
     .populate("kitchen");
 
   res

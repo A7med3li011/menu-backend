@@ -1,7 +1,7 @@
 import express from "express";
 import {
   createPurchase,
-  
+  deletePurchase,
   getPurchaseById,
   getPurchasesBySupplier,
   updatePurchase,
@@ -14,13 +14,30 @@ const purchaseRoutes = express.Router();
 
 purchaseRoutes.post(
   "/",
-  validate(createPurchaseSchema),
   auth(["admin"]),
+  validate(createPurchaseSchema),
   createPurchase
 );
-purchaseRoutes.put("/:id",  validate(updatePurchaseSchema), auth(["admin"]), updatePurchase);
-// purchaseRoutes.put("/export/:id",  auth(["admin"]), exportToInventory);
-purchaseRoutes.get("/supplier/:supplierId",  auth(["admin"]),getPurchasesBySupplier);
-purchaseRoutes.get("/:id",  auth(["admin"]),getPurchaseById);
+purchaseRoutes.put(
+  "/:id",
+  auth(["admin"]),
+  validate(updatePurchaseSchema),
+  updatePurchase
+);
+purchaseRoutes.delete(
+  "/:id",
+  auth(["admin"]),
+  deletePurchase
+);
+purchaseRoutes.get(
+  "/supplier/:supplierId",
+  auth(["admin"]),
+  getPurchasesBySupplier
+);
+purchaseRoutes.get(
+  "/:id",
+  auth(["admin"]),
+  getPurchaseById
+);
 
 export default purchaseRoutes;
