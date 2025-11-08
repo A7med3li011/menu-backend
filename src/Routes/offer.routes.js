@@ -9,6 +9,8 @@ import {
   activeOffer,
   deactiveOffer,
   createOrderOffer,
+  getAllOfferSlider,
+  getOfferDetails,
 } from "../controllers/offer.controller.js";
 
 import { auth } from "../middleware/auth/auth.js";
@@ -20,6 +22,11 @@ router.get(
   auth(["admin", "operation", "waiter", "customer", "staff"]),
   checkRole(["admin", "operation", "waiter", "customer", "staff"]),
   getAllOffer
+);
+router.get(
+  "/slider",
+
+  getAllOfferSlider
 );
 
 router.post(
@@ -42,6 +49,11 @@ router.get(
   auth(["admin", "operation", "waiter", "customer", "staff"]),
   checkRole(["admin", "operation", "waiter", "customer", "staff"]),
   getOffer
+);
+router.get(
+  "/slider/:offerId",
+
+  getOfferDetails
 );
 
 router.put(
