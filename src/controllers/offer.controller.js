@@ -75,10 +75,6 @@ export const createOffer = handlerAsync(async (req, res, next) => {
 export const getAllOffer = handlerAsync(async (req, res, next) => {
   const offer = await offerModel.find().populate("items", "title image price");
 
-  if (!offer || offer.length === 0) {
-    return next(new AppError("No offer exist"));
-  }
-
   res.status(200).json({
     message: "offers retreived successfully",
     result: offer.length,
@@ -90,9 +86,7 @@ export const getAllOfferSlider = handlerAsync(async (req, res, next) => {
     .find({ isActive: true })
     .populate("items", "title image price");
 
-  if (!offer || offer.length === 0) {
-    return next(new AppError("No offer exist"));
-  }
+  
 
   res.status(200).json({
     message: "offers retreived successfully",
@@ -118,9 +112,7 @@ export const getOffer = handlerAsync(async (req, res, next) => {
 });
 export const getOfferDetails = handlerAsync(async (req, res, next) => {
   const offerId = req.params.offerId;
-  const offer = await offerModel
-    .findById(offerId)
-    .populate("items");
+  const offer = await offerModel.findById(offerId).populate("items");
 
   if (!offer) {
     return next(new AppError("offer not found", 404));

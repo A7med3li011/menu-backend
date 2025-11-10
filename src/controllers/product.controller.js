@@ -10,8 +10,8 @@ export const addProduct = handlerAsync(async (req, res, next) => {
   const {
     title,
     category,
-    subCategory,
-    kitchen,
+    priceAfterDiscount,
+    extras,
     price,
     ingredients,
 
@@ -20,21 +20,19 @@ export const addProduct = handlerAsync(async (req, res, next) => {
 
   const categoryExist = await categoryModel.findById({ _id: category });
   if (!categoryExist) return next(new AppError("category is not exist", 404));
-  const subcategoryExist = await subCategoryModel.findById(subCategory);
-  if (!subcategoryExist)
-    return next(new AppError("subcategory is not exist", 404));
 
+  console.log();
   const newproduct = await productModel.create({
     title,
     createdBy: req.user._id,
     image: req.file.filename,
     category,
-    subCategory,
+    extras: JSON.parse(extras) || [],
     price,
     ingredients,
     image: req.file.filename,
     description,
-    kitchen,
+    priceAfterDiscount: priceAfterDiscount || 0,
   });
 
   res.status(201).json({ message: "product created sucessfully" });
@@ -53,9 +51,10 @@ export const updateProduct = handlerAsync(async (req, res, next) => {
     image = req.file.filename;
   }
 
+  const extras = JSON.parse(req.body.extras);
   const updatedProduct = await productModel.findByIdAndUpdate(
     { _id: id },
-    { ...req.body, ingredients: ingredients, image: image },
+    { ...req.body, ingredients: ingredients, extras, image: image },
     { new: true }
   );
 
@@ -67,9 +66,8 @@ export const updateProduct = handlerAsync(async (req, res, next) => {
 export const getProducts = handlerAsync(async (req, res, next) => {
   const products = await productModel
     .find({}, null, { isFavouriteFor: req.user._id })
-    .populate("kitchen")
-    .populate("category")
-    .populate("subCategory");
+
+    .populate("category");
   res
     .status(200)
     .json({ message: "product founded sucessfully", data: products });
@@ -78,10 +76,8 @@ export const getProductsbyId = handlerAsync(async (req, res, next) => {
   const { id } = req.params;
   const products = await productModel
     .findById(id)
-    .populate("kitchen")
-    .populate("category")
-    .populate("subCategory");
 
+    .populate("category");
   if (!products) {
     return next(new AppError("product not found", 404));
   }
@@ -91,9 +87,7 @@ export const getProductsbyId = handlerAsync(async (req, res, next) => {
 });
 export const getProductsbySub = handlerAsync(async (req, res, next) => {
   const { id } = req.params;
-  const products = await productModel
-    .find({ subCategory: id })
-    .populate("kitchen");
+  const products = await productModel.find({ category: id });
 
   res
     .status(200)

@@ -11,12 +11,12 @@ const productSchema = new mongoose.Schema({
     ref: "Category",
     required: true,
   },
-  subCategory: {
-    type: mongoose.Types.ObjectId,
-    ref: "subCategory",
-    required: true,
-  },
+
   price: {
+    type: Number,
+    min: 0,
+  },
+  priceAfterDiscount: {
     type: Number,
     min: 0,
   },
@@ -32,11 +32,7 @@ const productSchema = new mongoose.Schema({
   description: {
     type: String,
   },
-  kitchen: {
-    type: mongoose.Types.ObjectId,
-    ref: "kitchen",
-    required: true,
-  },
+
   available: {
     type: Boolean,
     default: true,

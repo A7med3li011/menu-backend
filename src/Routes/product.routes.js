@@ -44,7 +44,7 @@ proudctRoutes.get(
 );
 
 proudctRoutes.get(
-  "/bysubcat/:id",
+  "/cat/:id",
   // auth(["admin", "operation", "waiter", "customer"]),
   // checkRole(["admin", "operation", "waiter", "customer"]),
   getProductsbySub
