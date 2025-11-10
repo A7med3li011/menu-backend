@@ -22,7 +22,6 @@ import sectionRoutes from "./src/Routes/section.routes.js";
 import supplierRoutes from "./src/Routes/supplier.routes.js";
 import inventoryRoutes from "./src/Routes/inventory.routes.js";
 import purchaseRoutes from "./src/Routes/purchase.routes.js";
-import reviewRoutes from "./src/Routes/review.routes.js";
 
 connection();
 const app = express();
@@ -48,8 +47,7 @@ app.use("/api/v1/location", locationRoutes);
 app.use("/api/v1/section", sectionRoutes);
 app.use("/api/v1/supplier", supplierRoutes);
 app.use("/api/v1/inventory", inventoryRoutes);
-app.use("/api/v1/purchase", purchaseRoutes);
-app.use("/api/v1/review", reviewRoutes);
+app.use("/api/v1/purchase", purchaseRoutes  );
 
 // handle foriegn routes
 app.all("*", (req, res, next) => {
@@ -64,8 +62,8 @@ app.use((err, req, res, next) => {
     stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });
 });
-
-const myport = process.env.PORT || 5000;
+console.log("Environment Port:", process.env.Port);
+const myport = process.env.PORT || 4000;
 app.listen(myport, () => {
   console.log(`server on port ${myport} `);
 });

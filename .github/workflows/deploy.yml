@@ -1,0 +1,27 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install sshpass
+        run: sudo apt-get install -y sshpass
+
+      - name: Deploy to Server
+        run: |
+          sshpass -p "${{ secrets.PASS }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.HOST }} << EOF
+            cd /var/www/menu/backend
+            git reset --hard
+            git fetch origin
+            git pull origin prod
+            pm2 restart menu-backend
+          EOF
