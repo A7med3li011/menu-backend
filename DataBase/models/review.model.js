@@ -5,10 +5,22 @@ const reviewSchema = new mongoose.Schema(
     name: {
       type: String,
     },
-    rate: {
+    tasteRating: {
       type: Number,
     },
-    comment: {
+    hygieneRating: {
+      type: Number,
+    },
+    overallRating: {
+      type: Number,
+    },
+    wouldComeBack: {
+      type: Boolean,
+    },
+    mobileNumber: {
+      type: String,
+    },
+    additionalComments: {
       type: String,
     },
   },

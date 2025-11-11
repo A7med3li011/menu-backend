@@ -14,24 +14,35 @@ export const addProduct = handlerAsync(async (req, res, next) => {
     extras,
     price,
     ingredients,
-
+    subCategory,
     description,
   } = req.body;
 
   const categoryExist = await categoryModel.findById({ _id: category });
   if (!categoryExist) return next(new AppError("category is not exist", 404));
 
-  console.log();
+  // Safely parse extras
+  let parsedExtras = [];
+  if (extras) {
+    try {
+      parsedExtras = JSON.parse(extras);
+    } catch (error) {
+      return next(new AppError("Invalid extras format", 400));
+    }
+  }
+
+  // Safely parse ingredients
+
   const newproduct = await productModel.create({
     title,
     createdBy: req.user._id,
     image: req.file.filename,
     category,
-    extras: JSON.parse(extras) || [],
+    extras: parsedExtras,
     price,
-    ingredients,
-    image: req.file.filename,
+    ingredients: ingredients,
     description,
+    subCategory: subCategory || null,
     priceAfterDiscount: priceAfterDiscount || 0,
   });
 
@@ -40,7 +51,6 @@ export const addProduct = handlerAsync(async (req, res, next) => {
 
 export const updateProduct = handlerAsync(async (req, res, next) => {
   const { id } = req.params;
-  const ingredients = JSON.parse(req.body.ingredients);
   const foundedProduct = await productModel.findById({ _id: id });
   if (!foundedProduct) return next(new AppError("product not found", 404));
 
@@ -51,10 +61,25 @@ export const updateProduct = handlerAsync(async (req, res, next) => {
     image = req.file.filename;
   }
 
-  const extras = JSON.parse(req.body.extras);
+  // Safely parse ingredients - keep existing if not provided
+
+  // Safely parse extras - keep existing if not provided
+  let extras = foundedProduct.extras;
+  if (req.body.extras) {
+    try {
+      extras = JSON.parse(req.body.extras);
+      if (!extras.length) {
+      }
+    } catch (error) {
+      return next(new AppError("Invalid extras format", 400));
+    }
+  } else {
+    extras = [];
+  }
+
   const updatedProduct = await productModel.findByIdAndUpdate(
     { _id: id },
-    { ...req.body, ingredients: ingredients, extras, image: image },
+    { ...req.body, extras, image },
     { new: true }
   );
 
@@ -77,7 +102,7 @@ export const getProductsbyId = handlerAsync(async (req, res, next) => {
   const products = await productModel
     .findById(id)
 
-    .populate("category");
+    .populate("category subCategory");
   if (!products) {
     return next(new AppError("product not found", 404));
   }
@@ -87,7 +112,7 @@ export const getProductsbyId = handlerAsync(async (req, res, next) => {
 });
 export const getProductsbySub = handlerAsync(async (req, res, next) => {
   const { id } = req.params;
-  const products = await productModel.find({ category: id });
+  const products = await productModel.find({ subCategory: id });
 
   res
     .status(200)
