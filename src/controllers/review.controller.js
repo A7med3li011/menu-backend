@@ -11,5 +11,5 @@ export const createReview = handlerAsync(async (req, res, next) => {
 export const getReviews = handlerAsync(async (req, res, next) => {
   const data = await reviewModel.find();
 
-  res.status(201).json({ message: "review created successfully", data });
+  res.status(200).json({ message: "review retrieved successfully", data });
 });

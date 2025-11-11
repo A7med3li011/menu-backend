@@ -5,6 +5,9 @@ const reviewSchema = new mongoose.Schema(
     name: {
       type: String,
     },
+    firstVisit: {
+      type: String,
+    },
     tasteRating: {
       type: Number,
     },

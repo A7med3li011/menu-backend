@@ -23,15 +23,29 @@ export const addProduct = handlerAsync(async (req, res, next) => {
 
   // Safely parse extras
   let parsedExtras = [];
+
   if (extras) {
     try {
       parsedExtras = JSON.parse(extras);
+      // Convert price strings to numbers
+      parsedExtras = parsedExtras.map((extra) => ({
+        name: extra.name,
+        price: Number(extra.price),
+      }));
     } catch (error) {
       return next(new AppError("Invalid extras format", 400));
     }
   }
 
   // Safely parse ingredients
+  let parsedIngredients = [];
+  if (ingredients) {
+    try {
+      parsedIngredients = JSON.parse(ingredients);
+    } catch (error) {
+      return next(new AppError("Invalid ingredients format", 400));
+    }
+  }
 
   const newproduct = await productModel.create({
     title,
@@ -40,7 +54,7 @@ export const addProduct = handlerAsync(async (req, res, next) => {
     category,
     extras: parsedExtras,
     price,
-    ingredients: ingredients,
+    ingredients: parsedIngredients,
     description,
     subCategory: subCategory || null,
     priceAfterDiscount: priceAfterDiscount || 0,
@@ -62,14 +76,25 @@ export const updateProduct = handlerAsync(async (req, res, next) => {
   }
 
   // Safely parse ingredients - keep existing if not provided
+  let ingredients = foundedProduct.ingredients;
+  if (req.body.ingredients) {
+    try {
+      ingredients = JSON.parse(req.body.ingredients);
+    } catch (error) {
+      return next(new AppError("Invalid ingredients format", 400));
+    }
+  }
 
   // Safely parse extras - keep existing if not provided
   let extras = foundedProduct.extras;
   if (req.body.extras) {
     try {
       extras = JSON.parse(req.body.extras);
-      if (!extras.length) {
-      }
+      // Convert price strings to numbers
+      extras = extras.map((extra) => ({
+        name: extra.name,
+        price: Number(extra.price),
+      }));
     } catch (error) {
       return next(new AppError("Invalid extras format", 400));
     }
@@ -79,7 +104,7 @@ export const updateProduct = handlerAsync(async (req, res, next) => {
 
   const updatedProduct = await productModel.findByIdAndUpdate(
     { _id: id },
-    { ...req.body, extras, image },
+    { ...req.body, extras, ingredients, image },
     { new: true }
   );
 
