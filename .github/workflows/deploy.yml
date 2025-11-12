@@ -1,27 +1,65 @@
-name: Deploy to Server
+name: Deploy Node Backend
 
 on:
   push:
-    branches:
-      - prod
+    branches: [ prod ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    env:
+      DEPLOY_HOST: ${{ secrets.HOST }}
+      DEPLOY_PASS: ${{ secrets.PASS }}
+      DEPLOY_PATH: /var/www/menu/backend
+      SSH_OPTS: -o StrictHostKeyChecking=no -p 22
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Install sshpass
-        run: sudo apt-get install -y sshpass
+      # You said "install only, not start or run" — we install on the SERVER,
+      # so no npm install on the runner is required. Keeping Node here is optional.
+      - name: Set up Node.js (runner, optional)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
 
-      - name: Deploy to Server
+      - name: Install rsync & sshpass
         run: |
-          sshpass -p "${{ secrets.PASS }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.HOST }} << EOF
-            cd /var/www/menu/backend
-            git reset --hard
-            git fetch origin
-            git pull origin prod
-            pm2 restart menu-backend
-          EOF
+          sudo apt-get update
+          sudo apt-get install -y rsync sshpass
+
+      - name: Prepare remote directory
+        run: |
+          sshpass -p "$DEPLOY_PASS" ssh $SSH_OPTS root@"$DEPLOY_HOST" "\
+            sudo mkdir -p $DEPLOY_PATH && \
+            sudo chown -R \$USER:\$USER $DEPLOY_PATH"
+
+      - name: Deploy source (exclude node_modules, git, CI files, logs)
+        run: |
+          sshpass -p "$DEPLOY_PASS" rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.gitignore' \
+            --exclude 'npm-debug.log*' \
+            --exclude 'yarn-error.log*' \
+            --exclude 'pnpm-lock.yaml' \
+            -e "ssh $SSH_OPTS" ./ root@"$DEPLOY_HOST":"$DEPLOY_PATH"/
+
+      - name: Install dependencies on server (no start)
+        run: |
+          sshpass -p "$DEPLOY_PASS" ssh $SSH_OPTS root@"$DEPLOY_HOST" "\
+            cd $DEPLOY_PATH && \
+            if command -v npm >/dev/null 2>&1; then \
+              npm ci --omit=dev || npm install --production; \
+            else \
+              echo 'ERROR: npm not found on server' && exit 1; \
+            fi"
+
+      # Optional: restart your process manager (PM2/systemd). Adjust to your setup.
+      # - name: Restart app (PM2)
+      #   run: |
+      #     sshpass -p "$DEPLOY_PASS" ssh $SSH_OPTS root@"$DEPLOY_HOST" "\
+      #       cd $DEPLOY_PATH && pm2 reload ecosystem.config.js || pm2 restart <app-name> || true"
