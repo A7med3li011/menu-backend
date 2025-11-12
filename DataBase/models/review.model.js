@@ -5,6 +5,9 @@ const reviewSchema = new mongoose.Schema(
     name: {
       type: String,
     },
+    email: {
+      type: String,
+    },
     firstVisit: {
       type: String,
     },
@@ -19,6 +22,9 @@ const reviewSchema = new mongoose.Schema(
     },
     wouldComeBack: {
       type: Boolean,
+    },
+    howDidYouHear: {
+      type: String,
     },
     mobileNumber: {
       type: String,
