@@ -2,7 +2,7 @@ name: Deploy Node Backend
 
 on:
   push:
-    branches: [ main ]
+    branches: [ prod ]
 
 jobs:
   deploy:
@@ -63,4 +63,5 @@ jobs:
       #   run: |
       #     sshpass -p "$DEPLOY_PASS" ssh $SSH_OPTS root@"$DEPLOY_HOST" "\
       #       cd $DEPLOY_PATH && pm2 reload ecosystem.config.js || pm2 restart <app-name> || true"
+
 
