@@ -1,38 +1,50 @@
-name: Build and Deploy React App
+name: Deploy Node Backend
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: 18 # or your preferred version
+        node-version: 22 # recommended for modern packages
 
-    - name: Install dependencies and build
+    - name: Install sshpass
+      run: sudo apt-get update && sudo apt-get install -y sshpass
+
+    # Remove old backend code on server
+    - name: Clean backend directory on server
       run: |
-        npm install
+        sshpass -p "${{ secrets.PASS }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.HOST }} "\
+          rm -rf /var/www/menu/backend/* && mkdir -p /var/www/menu/backend/"
 
-    - name: Install SSH key
-      uses: appleboy/ssh-action@v0.1.10
-      with:
-        host: ${{ secrets.HOST }}
-        username: root
-        password: ${{ secrets.PASS }}
-        port: 22
-        script: |
-          rm -rf /var/www/menu/backend/*
-          mkdir -p /var/www/menu/backend/
-
-    - name: Deploy files to server
+    # Upload backend code WITHOUT node_modules & .git
+    - name: Upload backend files
       run: |
-            cd dist
-            sshpass -p "${{ secrets.PASS }}" scp -o StrictHostKeyChecking=no -P 22 -r . root@${{ secrets.HOST }}:/var/www/menu/backend/
+        tar --exclude='./node_modules' \
+            --exclude='./.git' \
+            --exclude='./.github' \
+            -czf backend.tar.gz .
+        sshpass -p "${{ secrets.PASS }}" scp -o StrictHostKeyChecking=no backend.tar.gz root@${{ secrets.HOST }}:/var/www/menu/backend/
+        sshpass -p "${{ secrets.PASS }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.HOST }} "\
+          cd /var/www/menu/backend && tar -xzf backend.tar.gz && rm backend.tar.gz"
+
+    # Install dependencies directly on the server
+    - name: Install dependencies on server
+      run: |
+        sshpass -p "${{ secrets.PASS }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.HOST }} "\
+          cd /var/www/menu/backend && npm install"
+
+    # (Optional) Restart using PM2 — uncomment if you use PM2
+    # - name: Restart backend
+    #   run: |
+    #     sshpass -p "${{ secrets.PASS }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.HOST }} "\
+    #       cd /var/www/menu/backend && pm2 restart app.js || pm2 start app.js --name menu-backend && pm2 save"
