@@ -89,7 +89,7 @@ export const getCategories = handlerAsync(async (req, res, next) => {
   }
 
   res.status(200).json({
-    message: "succes",
+    message: "success ya ahmed",
     data: data,
     test: true,
   });
