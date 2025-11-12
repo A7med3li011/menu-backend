@@ -8,43 +8,58 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    env:
+      DEPLOY_HOST: ${{ secrets.HOST }}
+      DEPLOY_PASS: ${{ secrets.PASS }}
+      DEPLOY_PATH: /var/www/menu/backend
+      SSH_OPTS: -o StrictHostKeyChecking=no -p 22
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 22 # recommended for modern packages
+      # You said "install only, not start or run" — we install on the SERVER,
+      # so no npm install on the runner is required. Keeping Node here is optional.
+      - name: Set up Node.js (runner, optional)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
 
-    - name: Install sshpass
-      run: sudo apt-get update && sudo apt-get install -y sshpass
+      - name: Install rsync & sshpass
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rsync sshpass
 
-    # Remove old backend code on server
-    - name: Clean backend directory on server
-      run: |
-        sshpass -p "${{ secrets.PASS }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.HOST }} "\
-          rm -rf /var/www/menu/backend/* && mkdir -p /var/www/menu/backend/"
+      - name: Prepare remote directory
+        run: |
+          sshpass -p "$DEPLOY_PASS" ssh $SSH_OPTS root@"$DEPLOY_HOST" "\
+            sudo mkdir -p $DEPLOY_PATH && \
+            sudo chown -R \$USER:\$USER $DEPLOY_PATH"
 
-    # Upload backend code WITHOUT node_modules & .git
-    - name: Upload backend files
-      run: |
-        tar --exclude='./node_modules' \
-            --exclude='./.git' \
-            --exclude='./.github' \
-            -czf backend.tar.gz .
-        sshpass -p "${{ secrets.PASS }}" scp -o StrictHostKeyChecking=no backend.tar.gz root@${{ secrets.HOST }}:/var/www/menu/backend/
-        sshpass -p "${{ secrets.PASS }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.HOST }} "\
-          cd /var/www/menu/backend && tar -xzf backend.tar.gz && rm backend.tar.gz"
+      - name: Deploy source (exclude node_modules, git, CI files, logs)
+        run: |
+          sshpass -p "$DEPLOY_PASS" rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.gitignore' \
+            --exclude 'npm-debug.log*' \
+            --exclude 'yarn-error.log*' \
+            --exclude 'pnpm-lock.yaml' \
+            -e "ssh $SSH_OPTS" ./ root@"$DEPLOY_HOST":"$DEPLOY_PATH"/
 
-    # Install dependencies directly on the server
-    - name: Install dependencies on server
-      run: |
-        sshpass -p "${{ secrets.PASS }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.HOST }} "\
-          cd /var/www/menu/backend && npm install"
+      - name: Install dependencies on server (no start)
+        run: |
+          sshpass -p "$DEPLOY_PASS" ssh $SSH_OPTS root@"$DEPLOY_HOST" "\
+            cd $DEPLOY_PATH && \
+            if command -v npm >/dev/null 2>&1; then \
+              npm ci --omit=dev || npm install --production; \
+            else \
+              echo 'ERROR: npm not found on server' && exit 1; \
+            fi"
 
-    # (Optional) Restart using PM2 — uncomment if you use PM2
-    # - name: Restart backend
-    #   run: |
-    #     sshpass -p "${{ secrets.PASS }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.HOST }} "\
-    #       cd /var/www/menu/backend && pm2 restart app.js || pm2 start app.js --name menu-backend && pm2 save"
+      # Optional: restart your process manager (PM2/systemd). Adjust to your setup.
+      # - name: Restart app (PM2)
+      #   run: |
+      #     sshpass -p "$DEPLOY_PASS" ssh $SSH_OPTS root@"$DEPLOY_HOST" "\
+      #       cd $DEPLOY_PATH && pm2 reload ecosystem.config.js || pm2 restart <app-name> || true"
