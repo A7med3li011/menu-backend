@@ -29,8 +29,9 @@ const app = express();
 
 // Increase payload limits for large file uploads
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ limit: "100mb", extended: true, parameterLimit: 100000 }));
+app.use(express.raw({ limit: "100mb" }));
 
 // Increase request timeout to 5 minutes for large file uploads
 app.use((req, res, next) => {
@@ -60,9 +61,6 @@ app.use("/api/v1/supplier", supplierRoutes);
 app.use("/api/v1/inventory", inventoryRoutes);
 app.use("/api/v1/purchase", purchaseRoutes);
 app.use("/api/v1/review", reviewRoutes);
-
-
-
 
 // handle foriegn routes
 app.all("*", (req, res, next) => {

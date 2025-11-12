@@ -102,5 +102,5 @@ export const getCategoryByid = handlerAsync(async (req, res, next) => {
     .populate("products");
   if (!categories) return next(new AppError("category not exist", 404));
 
-  res.status(200).json({ message: "success", data: categories });
+  res.status(200).json({ message: "successnn", data: categories });
 });
