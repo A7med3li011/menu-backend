@@ -58,10 +58,11 @@ jobs:
               echo 'ERROR: npm not found on server' && exit 1; \
             fi"
 
+
       # Optional: restart your process manager (PM2/systemd). Adjust to your setup.
-      # - name: Restart app (PM2)
-      #   run: |
-      #     sshpass -p "$DEPLOY_PASS" ssh $SSH_OPTS root@"$DEPLOY_HOST" "\
-      #       cd $DEPLOY_PATH && pm2 reload ecosystem.config.js || pm2 restart <app-name> || true"
+      - name: Restart app (PM2)
+        run: |
+          sshpass -p "$DEPLOY_PASS" ssh $SSH_OPTS root@"$DEPLOY_HOST" "\
+            cd $DEPLOY_PATH && pm2 reload ecosystem.config.js || pm2 restart menu-backend || true"
 
 
