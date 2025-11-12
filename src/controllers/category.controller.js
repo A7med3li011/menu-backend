@@ -84,17 +84,15 @@ export const getCategories = handlerAsync(async (req, res, next) => {
     const dishes = await productModel.countDocuments({
       category: category._id,
     });
-    obj.products = 0;
+    obj.products = dishes;
     data.push(obj);
   }
 
-  res
-    .status(200)
-    .json({
-      message: "successssssssssssssssssssssssssssssssssssss",
-      data: data,
-      test: true,
-    });
+  res.status(200).json({
+    message: "succes",
+    data: data,
+    test: true,
+  });
 });
 
 export const getCategoryByid = handlerAsync(async (req, res, next) => {
