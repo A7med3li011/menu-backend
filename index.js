@@ -26,8 +26,18 @@ import reviewRoutes from "./src/Routes/review.routes.js";
 
 connection();
 const app = express();
+
+// Increase payload limits for large file uploads
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Increase request timeout to 5 minutes for large file uploads
+app.use((req, res, next) => {
+  req.setTimeout(300000); // 5 minutes
+  res.setTimeout(300000); // 5 minutes
+  next();
+});
 
 // Make 'uploads' folder publicly accessible
 app.use("/uploads", express.static("uploads"));
