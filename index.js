@@ -51,6 +51,9 @@ app.use("/api/v1/inventory", inventoryRoutes);
 app.use("/api/v1/purchase", purchaseRoutes);
 app.use("/api/v1/review", reviewRoutes);
 
+
+
+
 // handle foriegn routes
 app.all("*", (req, res, next) => {
   next(new AppError(`invalid url ${req.originalUrl}`, 404));
