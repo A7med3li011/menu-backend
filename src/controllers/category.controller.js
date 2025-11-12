@@ -88,7 +88,13 @@ export const getCategories = handlerAsync(async (req, res, next) => {
     data.push(obj);
   }
 
-  res.status(200).json({ message: "success", data: data, test: true });
+  res
+    .status(200)
+    .json({
+      message: "successssssssssssssssssssssssssssssssssssss",
+      data: data,
+      test: true,
+    });
 });
 
 export const getCategoryByid = handlerAsync(async (req, res, next) => {
