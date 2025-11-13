@@ -5,6 +5,7 @@ import orderMdoel from "../../DataBase/models/order.mdoel.js";
 import { customAlphabet } from "nanoid";
 import { AppError } from "../utilities/AppError.js";
 import { handlerAsync } from "../utilities/handleAsync.js";
+import { deleteUploadedFile } from "../services/deleteFile.js";
 
 export const createOffer = handlerAsync(async (req, res, next) => {
   if (!req.file || !req.file.filename) {
@@ -47,9 +48,7 @@ export const getAllOfferSlider = handlerAsync(async (req, res, next) => {
 
 export const getOffer = handlerAsync(async (req, res, next) => {
   const offerId = req.params.offerId;
-  const offer = await offerModel
-    .findById(offerId)
-    .populate("items", "title image price");
+  const offer = await offerModel.findById(offerId);
 
   if (!offer) {
     return next(new AppError("offer not found", 404));
@@ -86,6 +85,19 @@ export const deactiveOffer = handlerAsync(async (req, res, next) => {
   }
 
   res.status(200).json({ message: "Offer deactivated successfully" });
+});
+export const deleteOffer = handlerAsync(async (req, res, next) => {
+  const offerId = req.params.offerId;
+
+  const offerExist = await offerModel.findById(offerId);
+  if (!offerExist) {
+    return next(new AppError("Offer not found", 404));
+  }
+  await deleteUploadedFile(offerExist.image);
+
+  const offer = await offerModel.findByIdAndDelete(offerId);
+
+  res.status(200).json({ message: "Offer deleted successfully" });
 });
 
 export const activeOffer = handlerAsync(async (req, res, next) => {

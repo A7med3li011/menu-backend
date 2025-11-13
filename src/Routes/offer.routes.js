@@ -11,6 +11,7 @@ import {
   createOrderOffer,
   getAllOfferSlider,
   getOfferDetails,
+  deleteOffer,
 } from "../controllers/offer.controller.js";
 
 import { auth } from "../middleware/auth/auth.js";
@@ -74,6 +75,12 @@ router.patch(
   auth(["admin", "operation", "waiter", "staff"]),
   checkRole(["admin", "operation", "waiter", "staff"]),
   deactiveOffer
+);
+router.delete(
+  "/:offerId",
+  auth(["admin", "operation", "waiter", "staff"]),
+  checkRole(["admin", "operation", "waiter", "staff"]),
+  deleteOffer
 );
 
 export default router;
