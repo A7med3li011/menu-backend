@@ -31,6 +31,7 @@ export const createSubCategory = handlerAsync(async (req, res, next) => {
         409
       )
     );
+    
   }
 
   const newSubCategory = await subCategoryModel.create({

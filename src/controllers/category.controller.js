@@ -88,6 +88,7 @@ export const getCategories = handlerAsync(async (req, res, next) => {
     data.push(obj);
   }
 
+  
   res.status(200).json({
     message: "success  ahmed",
     data: data,
