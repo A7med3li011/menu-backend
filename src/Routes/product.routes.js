@@ -11,6 +11,7 @@ import {
   updateProduct,
   getProductbestSaller,
   deleteProduct,
+  getProductsbyMainCategory,
 } from "../controllers/product.controller.js";
 
 const proudctRoutes = express.Router();
@@ -48,6 +49,12 @@ proudctRoutes.get(
   // auth(["admin", "operation", "waiter", "customer"]),
   // checkRole(["admin", "operation", "waiter", "customer"]),
   getProductsbySub
+);
+proudctRoutes.get(
+  "/category/:id",
+  // auth(["admin", "operation", "waiter", "customer"]),
+  // checkRole(["admin", "operation", "waiter", "customer"]),
+  getProductsbyMainCategory
 );
 proudctRoutes.get(
   "/:id",

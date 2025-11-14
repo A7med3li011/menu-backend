@@ -9,7 +9,9 @@ export const createSubCategory = handlerAsync(async (req, res, next) => {
   const { title, category } = req.body;
 
   if (!req.file) return next(new AppError("image is required", 400));
-  const subCategoryExist = await subCategoryModel.findOne({ title });
+  const subCategoryExist = await subCategoryModel.findOne({
+    title: title.toLowerCase(),
+  });
 
   if (subCategoryExist)
     return next(new AppError("subCategory is already exist", 409));
@@ -17,8 +19,22 @@ export const createSubCategory = handlerAsync(async (req, res, next) => {
 
   if (!CategoryExist) return next(new AppError("category not  exist", 409));
 
+  const isHasProductsWithOutSub = await productModel.find({
+    category,
+    subCategory: null,
+  });
+
+  if (isHasProductsWithOutSub.length > 0) {
+    return next(
+      new AppError(
+        "Unable to create a sub-category. This category contains products that are not linked to any sub-category.",
+        409
+      )
+    );
+  }
+
   const newSubCategory = await subCategoryModel.create({
-    title,
+    title: title.toLowerCase(),
     createdBy: req.user._id,
     image: req.file.filename,
     category,

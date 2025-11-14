@@ -143,6 +143,16 @@ export const getProductsbySub = handlerAsync(async (req, res, next) => {
     .status(200)
     .json({ message: "product founded sucessfully", data: products });
 });
+export const getProductsbyMainCategory = handlerAsync(
+  async (req, res, next) => {
+    const { id } = req.params;
+    const products = await productModel.find({ category: id });
+
+    res
+      .status(200)
+      .json({ message: "product founded sucessfully", data: products });
+  }
+);
 export const getProductbestSaller = handlerAsync(async (req, res, next) => {
   const topProductStats = await orderMdoel.aggregate([
     { $unwind: "$items" },
