@@ -102,9 +102,15 @@ export const updateProduct = handlerAsync(async (req, res, next) => {
     extras = [];
   }
 
+  let updatedData = req.body;
+
+  if (!updatedData.subCategory) {
+    updatedData.subCategory = null;
+  }
+
   const updatedProduct = await productModel.findByIdAndUpdate(
     { _id: id },
-    { ...req.body, extras, ingredients, image },
+    { ...updatedData, extras, ingredients, image },
     { new: true }
   );
 
